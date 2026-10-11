@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>盲选 - 别纠结了，让命运替你决定</title>
+<meta name="description" content="输入选项，一键盲选。今天吃什么、看什么电影、周末去哪，交给盲选帮你决定。">
+<style>
+  :root{
+    --bg:#08090d;
+    --text:#f5f7fb;
+    --muted:#8b93a5;
+    --line:rgba(255,255,255,.1);
+    --accent:#ffb703;
+    --accent2:#ff4d8d;
+    --accent3:#4cc9f0;
+    --lime:#c2f542;
+
+    --reel-h: 220px;
+    --reel-item-h: 88px;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{ min-height:100%; }
+
+  body{
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    overflow-x:hidden;
+    -webkit-text-size-adjust:100%;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  body::before{
+    content:"";
+    position:fixed;
+    inset:-30%;
+    z-index:0;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,183,3,.22), transparent 32%),
+      radial-gradient(circle at 85% 15%, rgba(255,77,141,.2), transparent 34%),
+      radial-gradient(circle at 50% 90%, rgba(76,201,240,.16), transparent 38%);
+    filter: blur(30px);
+    animation: drift 22s ease-in-out infinite alternate;
+  }
+
+  @keyframes drift{
+    0%{ transform: translate3d(0,0,0) scale(1); }
+    100%{ transform: translate3d(4%,-3%,0) scale(1.08); }
+  }
+
+  .marquee{
+    position:relative;
+    z-index:2;
+    overflow:hidden;
+    border-bottom:1px solid var(--line);
+    background:rgba(0,0,0,.4);
+    backdrop-filter: blur(10px);
+    height:38px;
+    display:flex;
+    align-items:center;
+  }
+
+  .marquee-track{
+    display:flex;
+    gap:36px;
+    white-space:nowrap;
+    animation: scroll 30s linear infinite;
+    font-size:13px;
+    color:var(--muted);
+    padding-left:36px;
+  }
+
+  .marquee-track b{ color:var(--accent); font-weight:800; }
+
+  @keyframes scroll{ to{ transform: translateX(-50%); } }
+
+  .wrap{
+    position:relative;
+    z-index:1;
+    max-width:1080px;
+    margin:0 auto;
+    padding:28px 20px 80px;
+  }
+
+  /* 导航 */
+  .nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    padding:14px 0 40px;
+  }
+
+  .logo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:17px;
+    font-weight:900;
+    letter-spacing:-.01em;
+  }
+
+  .logo-mark{
+    width:30px;
+    height:30px;
+    border-radius:9px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:grid;
+    place-items:center;
+    font-size:16px;
+    color:#1a1200;
+    box-shadow:0 8px 22px rgba(255,183,3,.3);
+    animation: logoPulse 3s ease-in-out infinite;
+    flex-shrink:0;
+  }
+
+  @keyframes logoPulse{
+    0%,100%{ transform: rotate(-4deg) scale(1); }
+    50%{ transform: rotate(4deg) scale(1.06); }
+  }
+
+  .logo em{
+    font-style:normal;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    font-size:13px;
+    font-weight:600;
+    margin-left:4px;
+    opacity:.85;
+  }
+
+  .status-pill{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 13px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:rgba(255,255,255,.04);
+    font-size:12px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+
+  .status-pill i{
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--lime);
+    box-shadow:0 0 10px var(--lime);
+    animation: blink 1.6s ease-in-out infinite;
+    flex-shrink:0;
+  }
+
+  @keyframes blink{ 50%{ opacity:.35; } }
+
+  .hero{ position:relative; margin-bottom:40px; }
+
+  .hero-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 13px;
+    border-radius:999px;
+    border:1px solid rgba(255,183,3,.35);
+    background:rgba(255,183,3,.08);
+    color:var(--accent);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.08em;
+    margin-bottom:20px;
+  }
+
+  .hero h1{
+    font-size:clamp(2.4rem, 7.5vw, 5.6rem);
+    line-height:1.02;
+    letter-spacing:-.045em;
+    font-weight:900;
+  }
+
+  .hero h1 .line2{
+    display:block;
+    background:linear-gradient(90deg,var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    padding-bottom:.08em;
+  }
+
+  .hero p{
+    margin-top:20px;
+    max-width:560px;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.75;
+  }
+
+  .stage{
+    display:grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .card{
+    position:relative;
+    border:1px solid var(--line);
+    border-radius:26px;
+    background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02));
+    backdrop-filter: blur(20px);
+    padding:24px;
+    overflow:hidden;
+  }
+
+  .input-card .label{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:14px;
+  }
+
+  .input-card .label b{ font-size:15px; font-weight:800; }
+  .input-card .label span{ font-size:11px; color:var(--muted); letter-spacing:.04em; }
+
+  textarea{
+    width:100%;
+    min-height:140px;
+    padding:16px 18px;
+    resize:none;
+    border:1px solid var(--line);
+    border-radius:16px;
+    outline:none;
+    background:rgba(0,0,0,.32);
+    color:var(--text);
+    font:inherit;
+    font-size:15px;
+    line-height:1.7;
+    transition:.2s;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,.18) transparent;
+  }
+
+  textarea:focus{
+    border-color:rgba(255,183,3,.6);
+    box-shadow:0 0 0 4px rgba(255,183,3,.08);
+    background:rgba(0,0,0,.42);
+  }
+
+  textarea::placeholder{ color:rgba(139,147,165,.65); }
+
+  textarea::-webkit-scrollbar{ width:7px; }
+  textarea::-webkit-scrollbar-track{ background:transparent; margin:6px; }
+  textarea::-webkit-scrollbar-thumb{
+    background:rgba(255,255,255,.16);
+    border-radius:999px;
+    border:2px solid transparent;
+    background-clip:padding-box;
+  }
+  textarea::-webkit-scrollbar-thumb:hover{
+    background:rgba(255,255,255,.3);
+    background-clip:padding-box;
+  }
+  textarea::-webkit-resizer{ display:none; }
+
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:14px;
+  }
+
+  .chip{
+    padding:7px 13px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:rgba(255,255,255,.04);
+    color:var(--muted);
+    font:inherit;
+    font-size:12px;
+    cursor:pointer;
+    transition:.2s;
+  }
+
+  .chip:hover, .chip.active{
+    color:var(--text);
+    border-color:rgba(255,183,3,.5);
+    background:rgba(255,183,3,.1);
+  }
+
+  .roll-btn{
+    width:100%;
+    margin-top:18px;
+    padding:18px 24px;
+    border:0;
+    border-radius:16px;
+    font:inherit;
+    font-size:16px;
+    font-weight:900;
+    letter-spacing:.02em;
+    color:#1a1200;
+    background:linear-gradient(135deg,var(--accent),#ff7b00);
+    box-shadow:0 14px 34px rgba(255,183,3,.24), inset 0 -2px 0 rgba(0,0,0,.1);
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition:.2s;
+  }
+
+  .roll-btn::after{
+    content:"";
+    position:absolute;
+    top:0; left:-60%;
+    width:40%; height:100%;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+    transform:skewX(-20deg);
+    transition:.6s;
+  }
+
+  .roll-btn:hover::after{ left:120%; }
+
+  .roll-btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 18px 40px rgba(255,183,3,.36);
+  }
+
+  .roll-btn:active{ transform:translateY(0); }
+
+  .roll-btn:disabled{
+    cursor:wait;
+    opacity:.85;
+    transform:none;
+  }
+
+  .machine-card{
+    position:sticky;
+    top:20px;
+    padding:0;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,183,3,.12), transparent 55%),
+      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  }
+
+  .machine-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:16px 22px;
+    border-bottom:1px solid var(--line);
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:.08em;
+  }
+
+  .machine-head b{
+    color:var(--text);
+    font-weight:800;
+    letter-spacing:.02em;
+  }
+
+  .machine-head em{
+    font-style:normal;
+    color:var(--accent);
+    font-weight:800;
+  }
+
+  .reel{
+    position:relative;
+    height:var(--reel-h);
+    overflow:hidden;
+  }
+
+  .reel::before,
+  .reel::after{
+    content:"";
+    position:absolute;
+    left:0; right:0;
+    height:66px;
+    pointer-events:none;
+    z-index:3;
+  }
+
+  .reel::before{
+    top:0;
+    background:linear-gradient(180deg, rgba(8,9,13,.95), transparent);
+  }
+
+  .reel::after{
+    bottom:0;
+    background:linear-gradient(0deg, rgba(8,9,13,.95), transparent);
+  }
+
+  .reel-window{
+    position:absolute;
+    top:50%;
+    left:16px;
+    right:16px;
+    height:var(--reel-item-h);
+    transform:translateY(-50%);
+    border-top:1px solid rgba(255,183,3,.42);
+    border-bottom:1px solid rgba(255,183,3,.42);
+    border-radius:6px;
+    pointer-events:none;
+    z-index:2;
+    box-shadow: inset 0 0 30px rgba(255,183,3,.08);
+  }
+
+  .reel-window::before,
+  .reel-window::after{
+    content:"";
+    position:absolute;
+    width:6px; height:6px;
+    background:var(--accent);
+    border-radius:50%;
+    top:50%;
+    margin-top:-3px;
+    box-shadow:0 0 8px var(--accent);
+  }
+  .reel-window::before{ left:-3px; }
+  .reel-window::after{ right:-3px; }
+
+  .reel-strip{
+    position:relative;
+    z-index:1;
+    padding-top: calc((var(--reel-h) - var(--reel-item-h)) / 2);
+    padding-bottom: calc((var(--reel-h) - var(--reel-item-h)) / 2);
+    will-change: transform;
+  }
+
+  .reel-item{
+    height:var(--reel-item-h);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 24px;
+    font-size:clamp(1.6rem, 5.5vw, 2.6rem);
+    font-weight:900;
+    letter-spacing:-.02em;
+    color:rgba(245,247,251,.55);
+    text-align:center;
+    word-break:break-word;
+    line-height:1.1;
+    transition: color .3s;
+  }
+
+  .reel-item.win{
+    background:linear-gradient(180deg,#fff,#ffd166);
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+
+  .stamp{
+    position:absolute;
+    top:14px;
+    right:20px;
+    z-index:6;
+    padding:6px 10px;
+    border:2px solid var(--accent2);
+    border-radius:8px;
+    color:var(--accent2);
+    font-size:11px;
+    font-weight:900;
+    letter-spacing:.16em;
+    background:rgba(8,9,13,.55);
+    backdrop-filter: blur(6px);
+    opacity:0;
+    transform: rotate(8deg) scale(.6);
+    transition: .35s cubic-bezier(.34,1.56,.64,1);
+    pointer-events:none;
+    white-space:nowrap;
+  }
+
+  .stamp.show{
+    opacity:1;
+    transform: rotate(8deg) scale(1);
+    animation: stampPulse .6s ease-out;
+  }
+
+  @keyframes stampPulse{
+    0%{ transform: rotate(8deg) scale(1.4); }
+    100%{ transform: rotate(8deg) scale(1); }
+  }
+
+  .result-info{
+    padding:20px 24px 24px;
+    border-top:1px solid var(--line);
+    text-align:center;
+  }
+
+  .reason{
+    font-size:14px;
+    color:var(--text);
+    font-weight:700;
+    margin-bottom:6px;
+    min-height:20px;
+  }
+
+  .meta{
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:.04em;
+    min-height:16px;
+  }
+
+  .copy-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top:14px;
+    padding:9px 16px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:rgba(255,255,255,.04);
+    color:var(--muted);
+    font:inherit;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    transition:.2s;
+  }
+
+  .copy-btn:hover{
+    color:var(--text);
+    border-color:rgba(255,183,3,.5);
+    background:rgba(255,183,3,.08);
+  }
+
+  .confetti{
+    position:fixed;
+    width:8px; height:14px;
+    z-index:100;
+    pointer-events:none;
+    border-radius:2px;
+    animation: fall 1.6s ease-in forwards;
+  }
+
+  @keyframes fall{
+    0%{ transform: translate3d(0,0,0) rotate(0); opacity:1; }
+    100%{ transform: translate3d(var(--dx), 100vh, 0) rotate(var(--rot)); opacity:0; }
+  }
+
+  .bottom{
+    margin-top:36px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+
+  .mini{
+    padding:18px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+  }
+
+  .mini strong{ display:block; font-size:13px; margin-bottom:6px; }
+  .mini span{ color:var(--muted); font-size:12px; line-height:1.6; }
+
+  footer{
+    margin-top:34px;
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    letter-spacing:.05em;
+  }
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:28px;
+    z-index:200;
+    padding:11px 18px;
+    border-radius:999px;
+    background:#fff;
+    color:#111;
+    font-weight:800;
+    font-size:13px;
+    opacity:0;
+    pointer-events:none;
+    transform: translate(-50%,20px);
+    transition:.3s;
+  }
+
+  .toast.show{
+    opacity:1;
+    transform: translate(-50%,0);
+  }
+
+  @media (max-width: 820px){
+    :root{
+      --reel-h: 200px;
+      --reel-item-h: 78px;
+    }
+
+    .wrap{ padding:0 16px 60px; }
+
+    /* 导航吸顶 */
+    .nav{
+      position:sticky;
+      top:0;
+      z-index:50;
+      margin:0 -16px;
+      padding:12px 16px;
+      background:rgba(8,9,13,.85);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      border-bottom:1px solid var(--line);
+    }
+
+    .stage{ grid-template-columns: 1fr; }
+    .machine-card{ position:relative; top:auto; }
+    .reel-item{ font-size:clamp(1.5rem, 7vw, 2.2rem); }
+    .bottom{ grid-template-columns:1fr; }
+    .hero{ margin-top:24px; margin-bottom:30px; }
+    .reel::before, .reel::after{ height:56px; }
+    .stamp{ top:10px; right:14px; font-size:10px; padding:5px 8px; }
+  }
+
+  @media (max-width: 480px){
+    .roll-btn{ padding:16px 20px; font-size:15px; }
+    .card{ padding:20px; border-radius:22px; }
+    .machine-head{ padding:14px 18px; }
+    .result-info{ padding:18px 18px 20px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="marquee">
+    <div class="marquee-track">
+      <span><b>·</b> 别纠结了，让命运替你决定</span>
+      <span><b>·</b> 今天吃什么？周末去哪？看什么电影？</span>
+      <span><b>·</b> 盲选不是瞎选，是把时间留给自己</span>
+      <span><b>·</b> 选择困难症收容所 · mangxuan.cn</span>
+      <span><b>·</b> 别纠结了，让命运替你决定</span>
+      <span><b>·</b> 今天吃什么？周末去哪？看什么电影？</span>
+      <span><b>·</b> 盲选不是瞎选，是把时间留给自己</span>
+      <span><b>·</b> 选择困难症收容所 · mangxuan.cn</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <nav class="nav">
+      <div class="logo">
+        <div class="logo-mark">盲</div>
+        盲选 <em>mangxuan.cn</em>
+      </div>
+      <div class="status-pill"><i></i> 命运引擎在线</div>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-tag">◆ 选择困难症收容所</div>
+      <h1>
+        别纠结了，
+        <span class="line2">让命运替你决定。</span>
+      </h1>
+      <p>输入选项，点一下，命运帮你选一个。今天吃什么、看什么电影、周末去哪，统统交给盲选。</p>
+    </header>
+
+    <main class="stage">
+      <section class="card input-card">
+        <div class="label">
+          <b>盲选池</b>
+          <span>每行一个 · 或用逗号隔开</span>
+        </div>
+
+        <textarea id="options" placeholder="火锅&#10;日料&#10;烧烤&#10;麻辣烫&#10;随便"></textarea>
+
+        <div class="chips" aria-label="常用场景">
+          <button class="chip" type="button" data-preset="food">今天吃什么</button>
+          <button class="chip" type="button" data-preset="weekend">周末去哪</button>
+          <button class="chip" type="button" data-preset="movie">看什么电影</button>
+          <button class="chip" type="button" data-preset="drink">喝什么奶茶</button>
+          <button class="chip" type="button" data-preset="takeout">谁去拿外卖</button>
+          <button class="chip" type="button" data-preset="holiday">国庆去哪玩</button>
+        </div>
+
+        <button id="rollBtn" class="roll-btn" type="button">让命运掷骰子</button>
+      </section>
+
+      <section class="card machine-card" id="machineCard">
+        <div class="machine-head">
+          <b>命运引擎</b>
+          <em id="spinCount">已运转 0 次</em>
+        </div>
+
+        <div class="reel">
+          <div class="reel-window"></div>
+          <div class="reel-strip" id="reelStrip">
+            <div class="reel-item">准 备 就 绪</div>
+          </div>
+          <div class="stamp" id="stamp">命运已定</div>
+        </div>
+
+        <div class="result-info">
+          <p class="reason" id="resultReason">输入选项，然后让命运替你决定。</p>
+          <p class="meta" id="status">当前状态：等待投喂选项</p>
+          <button class="copy-btn" id="copyBtn" type="button">⧉ 复制结果</button>
+        </div>
+      </section>
+    </main>
+
+    <section class="bottom">
+      <div class="mini">
+        <strong>怎么玩</strong>
+        <span>写选项 → 点按钮 → 接受结果</span>
+      </div>
+      <div class="mini">
+        <strong>适合场景</strong>
+        <span>午饭、电影、周末、谁去拿外卖</span>
+      </div>
+      <div class="mini">
+        <strong>原则</strong>
+        <span>盲选不是瞎选，是把时间留给自己</span>
+      </div>
+    </section>
+
+    <footer>© mangxuan.cn · 把选择交给运气，把时间留给自己</footer>
+  </div>
+
+  <div class="toast" id="toast">已复制</div>
+
+<script>
+  const optionsEl = document.getElementById('options');
+  const rollBtn = document.getElementById('rollBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const reelStrip = document.getElementById('reelStrip');
+  const resultReason = document.getElementById('resultReason');
+  const statusEl = document.getElementById('status');
+  const stamp = document.getElementById('stamp');
+  const machineCard = document.getElementById('machineCard');
+  const spinCountEl = document.getElementById('spinCount');
+  const toast = document.getElementById('toast');
+
+  const presets = {
+    food: '火锅\n日料\n烧烤\n麻辣烫\n汉堡\n兰州拉面',
+    weekend: '去公园\n看电影\n逛展\n爬山\n咖啡馆发呆\n在家躺平',
+    movie: '科幻片\n喜剧片\n悬疑片\n动画片\n老电影\n随便点开一部',
+    drink: '奶茶\n美式\n柠檬茶\n气泡水\n热牛奶\n白开水',
+    takeout: '我去\n你去\n石头剪刀布\n今天不点外卖\n让最忙的人去\n随机抽一个',
+    holiday: '去大理躺平\n去成都看熊猫\n去重庆吃火锅\n去长沙喝茶颜悦色\n去淄博吃烧烤\n去新疆自驾\n去三亚看海\n去西安吃泡馍\n去哈尔滨看雪\n带电脑去旅游\n远程办公顺便旅游\n加班\n在家写代码\n改bug\n在家躺平\n出去人挤人\n回老家\n睡七天\n学新技术\n打游戏\n继续写代码'
+  };
+
+  const reasons = [
+    '宇宙的骰子已经落地。',
+    '不是它最好，是它现在最顺眼。',
+    '选择困难症临时下线。',
+    '大数据没有参与，纯靠缘分。',
+    '再纠结就不礼貌了。',
+    '听我的，就它了。',
+    '这是今天的盲选冠军。',
+    '别问为什么，问就是天意。'
+  ];
+
+  let rolling = false;
+  let spinCount = parseInt(localStorage.getItem('mx_spin') || '0', 10);
+  let toastTimer = null;
+
+  spinCountEl.textContent = '已运转 ' + spinCount + ' 次';
+
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function getOptions(){
+    return optionsEl.value
+      .split(/[\n,，、;；]+/)
+      .map(x => x.trim())
+      .filter(Boolean);
+  }
+
+  function showToast(text){
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  function scrollToMachine(){
+    const rect = machineCard.getBoundingClientRect();
+    const viewH = window.innerHeight || document.documentElement.clientHeight;
+    // 留出吸顶导航的高度
+    const navH = window.innerWidth <= 820 ? 56 : 0;
+    if (rect.top >= navH && rect.bottom <= viewH) return;
+    const targetY = window.scrollY + rect.top - navH - 10;
+    window.scrollTo({ top: targetY, behavior: 'smooth' });
+  }
+
+  function burstConfetti(){
+    const colors = ['#ffb703','#ff4d8d','#4cc9f0','#c2f542','#ffffff'];
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    for (let i = 0; i < 26; i++){
+      const p = document.createElement('div');
+      p.className = 'confetti';
+      p.style.left = centerX + 'px';
+      p.style.top = centerY + 'px';
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      const dx = (Math.random() - 0.5) * 600;
+      const rot = (Math.random() - 0.5) * 1200;
+      p.style.setProperty('--dx', dx + 'px');
+      p.style.setProperty('--rot', rot + 'deg');
+      p.style.animationDelay = (Math.random() * 0.2) + 's';
+      p.style.animationDuration = (1.2 + Math.random() * 0.6) + 's';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 2200);
+    }
+  }
+
+  function buildReel(items, repeats){
+    const seq = [];
+    for (let i = 0; i < repeats; i++){
+      seq.push(items[i % items.length]);
+    }
+    const final = pick(items);
+    seq.push(final);
+    return { seq, final };
+  }
+
+  function renderReel(seq, winningIndex){
+    reelStrip.innerHTML = seq.map((t, i) =>
+      `<div class="reel-item${i === winningIndex ? ' win' : ''}">${escapeHtml(t)}</div>`
+    ).join('');
+  }
+
+  function roll(){
+    if (rolling) return;
+
+    const opts = getOptions();
+
+    if (opts.length < 2){
+      statusEl.textContent = '至少写两个选项，命运才有得选。';
+      optionsEl.focus();
+      return;
+    }
+
+    rolling = true;
+    rollBtn.disabled = true;
+    rollBtn.textContent = '命运翻牌中...';
+    resultReason.textContent = '别催，天机正在加载。';
+    statusEl.textContent = '正在运转...';
+    stamp.classList.remove('show');
+
+    if (document.activeElement && document.activeElement.blur){
+      document.activeElement.blur();
+    }
+    setTimeout(scrollToMachine, 60);
+
+    setTimeout(() => {
+      const repeats = 24 + Math.floor(Math.random() * 8);
+      const { seq } = buildReel(opts, repeats);
+      const winIndex = seq.length - 1;
+
+      renderReel(seq, winIndex);
+
+      reelStrip.style.transition = 'none';
+      reelStrip.style.transform = 'translateY(0)';
+      reelStrip.offsetHeight;
+
+      const styles = getComputedStyle(document.documentElement);
+      const itemH = parseFloat(styles.getPropertyValue('--reel-item-h')) || 88;
+      const endY = -winIndex * itemH;
+
+      const duration = 2.4 + Math.random() * 0.6;
+      reelStrip.style.transition = `transform ${duration}s cubic-bezier(.15,.68,.2,1)`;
+      reelStrip.style.transform = `translateY(${endY}px)`;
+
+      setTimeout(() => {
+        stamp.classList.add('show');
+        resultReason.textContent = pick(reasons);
+        statusEl.textContent = '命运已定，别想了。';
+        rollBtn.disabled = false;
+        rollBtn.textContent = '再让命运掷一次';
+        rolling = false;
+
+        spinCount++;
+        localStorage.setItem('mx_spin', String(spinCount));
+        spinCountEl.textContent = '已运转 ' + spinCount + ' 次';
+
+        burstConfetti();
+      }, duration * 1000 + 60);
+    }, 260);
+  }
+
+  rollBtn.addEventListener('click', roll);
+
+  optionsEl.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') roll();
+  });
+
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.preset;
+      if (!presets[key]) return;
+
+      optionsEl.value = presets[key];
+      statusEl.textContent = '已装填，点按钮开始盲选。';
+      resultReason.textContent = '命运引擎待命中。';
+
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    const winItem = reelStrip.querySelector('.reel-item.win');
+    const resultText = winItem ? winItem.textContent : '（还没结果）';
+    const text = `盲选结果：${resultText}\n理由：${resultReason.textContent}\n来自 mangxuan.cn`;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('已复制，拿去发群里');
+    } catch (err) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      showToast('已复制，拿去发群里');
+    }
+  });
+</script>
+</body>
+</html>
